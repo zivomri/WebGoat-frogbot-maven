@@ -18,8 +18,9 @@ permissions:
   security-events: write # Required for uploading code scanning.
 
 env:
-  RT_REPO_MVN_VIRTUAL: "alpha-mvn-virtual"
-  RT_REPO_DOCKER_VIRTUAL: "alpha-docker-virtual"
+  RT_REPO_MVN_RELEASE: "rsa-demo-maven-release"
+  RT_REPO_MVN_SNAPSHOT: "rsa-demo-maven-sanpshot"
+  RT_REPO_DOCKER_LOCAL: "rsa-demo-docker-local"
 
 jobs:
  mvn-build-and-publish:
@@ -39,20 +40,24 @@ jobs:
        uses: jfrog/setup-jfrog-cli@v4
        id: setup-cli
        env:
-        JF_URL: ${{ vars.JF_URL }}
+        JF_URL: ${{ secrets.JF_URL }}
        with:
-        oidc-provider-name: mpatel-jfrog-githuboidc 
-     - name: Login to JFrog Docker repo
-       uses: docker/login-action@v3
-       with:
-        registry: ${{ vars.JF_URL }}
-        username: ${{steps.setup-cli.outputs.oidc-user}}
-        password: ${{steps.setup-cli.outputs.oidc-token}}
+        oidc-provider-name: omriz-oidc
+        oidc-token-audience: omriz-oidc
+     - name: Login to JFrog Artifactory (Docker)
+       env:
+         JF_URL: ${{ secrets.JF_URL }}
+         JF_ARTIFACTORY_USER: omriz
+         JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+       run: |
+         JF_HOST="${JF_URL#https://}"
+         echo "JF_HOST=${JF_HOST}" >> $GITHUB_ENV
+         echo "$JF_ACCESS_TOKEN" | docker login "$JF_HOST" -u "$JF_ARTIFACTORY_USER" --password-stdin
      - name: Health check JFrog Artifactory instance 🐸
        run: |
         jf --version
         jf rt ping
-        jf mvnc --repo-resolve-releases ${{ env.RT_REPO_MVN_VIRTUAL}} --repo-resolve-snapshots ${{ env.RT_REPO_MVN_VIRTUAL}} --repo-deploy-releases ${{ env.RT_REPO_MVN_VIRTUAL}} --repo-deploy-snapshots ${{ env.RT_REPO_MVN_VIRTUAL}}
+        jf mvnc --repo-resolve-releases "${{ env.RT_REPO_MVN_RELEASE }}" --repo-resolve-snapshots "${{ env.RT_REPO_MVN_SNAPSHOT }}" --repo-deploy-releases "${{ env.RT_REPO_MVN_RELEASE }}" --repo-deploy-snapshots "${{ env.RT_REPO_MVN_SNAPSHOT }}"
      - name: Fix Code Formatting with Spotless
        run: mvn spotless:apply
      - name: Curation Audit
@@ -66,9 +71,9 @@ jobs:
         jf audit
      - name: Docker Build 🐳🐸 and scan
        run: |
-         jf docker build . -t soleng.jfrog.io/${{ env.RT_REPO_DOCKER_VIRTUAL}}/maven-webgoat:${{github.run_number}}
-         jf docker scan soleng.jfrog.io/${{ env.RT_REPO_DOCKER_VIRTUAL}}/maven-webgoat:${{github.run_number}}
-         jf docker push soleng.jfrog.io/${{ env.RT_REPO_DOCKER_VIRTUAL}}/maven-webgoat:${{github.run_number}}
+         jf docker build . -t $JF_HOST/${{ env.RT_REPO_DOCKER_LOCAL }}/maven-webgoat:${{ github.run_number }}
+         jf docker scan $JF_HOST/${{ env.RT_REPO_DOCKER_LOCAL }}/maven-webgoat:${{ github.run_number }}
+         jf docker push $JF_HOST/${{ env.RT_REPO_DOCKER_LOCAL }}/maven-webgoat:${{ github.run_number }}
      - name: Publish build build-info
        run: |
          # Collect and store environment variables in the build-info
