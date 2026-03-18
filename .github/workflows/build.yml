@@ -78,6 +78,7 @@ jobs:
        id: build-docker
        env:
         JF_URL: ${{ secrets.JF_URL }}
+        BUILD_NUMBER: ${{ github.run_number }}
        run: |
          JF_HOST="${JF_URL#https://}"
          CACHE_REF="$JF_HOST/${{ env.RT_REPO_DOCKER_LOCAL }}/maven-webgoat:buildcache"
@@ -86,31 +87,26 @@ jobs:
             --cache-to type=registry,ref="${CACHE_REF}",mode=max \
             --metadata-file=build-metadata \
             --platform linux/arm64,linux/amd64 \
-            --label build.number="${build_number}" \
+            --label build.number="${BUILD_NUMBER}" \
             --label build.name="${BUILD_NAME}" \
             --label project.name="${PROJECT_KEY}" \
             --label author="${{ github.actor }}" \
             -t "$JF_HOST/${{ env.RT_REPO_DOCKER_LOCAL }}/maven-webgoat:${{ github.run_number }}" \
-            -f Dockerfile.prebuilt next-build
+            -f Dockerfile .
      - name: Scan Docker image with JFrog Xray
+       env:
+        JF_URL: ${{ secrets.JF_URL }}
        run: |
-        echo "=== docker images ==="
-        docker images
-        IMAGE_REF=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "nba-app:${NPM_PACKAGE_BUILD_VERSION}-b${build_number}" | head -1)
-        if [ -z "$IMAGE_REF" ]; then
-          # Image not found locally, need to pull
-          IMAGE_REF="${JF_HOST}/${DOCKER_REPO_NAME}/nba-app:${NPM_PACKAGE_BUILD_VERSION}-b${build_number}"
-          echo "Image not found locally, pulling: $IMAGE_REF"
-          docker pull "$IMAGE_REF"
-        fi
-        echo "Scanning image: $IMAGE_REF"
-        jf docker scan "$IMAGE_REF" --project "${PROJECT_KEY}"
+         JF_HOST="${JF_URL#https://}"
+         IMAGE_REF="$JF_HOST/${{ env.RT_REPO_DOCKER_LOCAL }}/maven-webgoat:${{ github.run_number }}"
+         echo "Scanning image: $IMAGE_REF"
+         jf docker scan "$IMAGE_REF" --project "${{ env.PROJECT_KEY }}"
      - name: Publish Docker build info to JFrog Artifactory
        run: |
           jf rt build-docker-create "/${{ env.RT_REPO_DOCKER_LOCAL }}" --image-file=build-metadata \
-            --build-name="${BUILD_NAME}" \
-            --build-number="${build_number}" \
-            --project="${PROJECT_KEY}"
+            --build-name="${{ env.BUILD_NAME }}" \
+            --build-number="${{ github.run_number }}" \
+            --project="${{ env.PROJECT_KEY }}"
      - name: Publish build build-info
        run: |
          # Collect and store environment variables in the build-info
