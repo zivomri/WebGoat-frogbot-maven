@@ -17,7 +17,7 @@ permissions:
 env:
   PROJECT_KEY: "rsa-demo"
   RT_REPO_MVN_RELEASE: "rsa-demo-maven-release"
-  RT_REPO_MVN_SNAPSHOT: "rsa-demo-maven-sanpshot"
+  RT_REPO_MVN_SNAPSHOT: "rsa-demo-maven-snapshot"
   RT_REPO_DOCKER_LOCAL: "rsa-demo-docker-local"
 
 jobs:
@@ -58,7 +58,7 @@ jobs:
         jf rt ping
         jf mvnc --repo-resolve-releases "${{ env.RT_REPO_MVN_RELEASE }}" --repo-resolve-snapshots "${{ env.RT_REPO_MVN_SNAPSHOT }}" --repo-deploy-releases "${{ env.RT_REPO_MVN_RELEASE }}" --repo-deploy-snapshots "${{ env.RT_REPO_MVN_SNAPSHOT }}"
      - name: Fix Code Formatting with Spotless
-       run: mvn spotless:apply
+       run: jf mvn spotless:apply
      - name: Curation Audit
        run: |
         jf ca --format=table --threads=100
