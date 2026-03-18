@@ -95,12 +95,32 @@ jobs:
             -f Dockerfile .
      - name: Scan Docker image with JFrog Xray
        env:
-        JF_URL: ${{ secrets.JF_URL }}
+         JF_URL: ${{ secrets.JF_URL }}
+         PROJECT_KEY: ${{ env.PROJECT_KEY }}
+         BUILD_NAME: ${{ env.BUILD_NAME }}
+         RT_REPO_DOCKER_LOCAL: ${{ env.RT_REPO_DOCKER_LOCAL }}
        run: |
+         echo "=== docker images ==="
+         docker images
+
          JF_HOST="${JF_URL#https://}"
-         IMAGE_REF="$JF_HOST/${{ env.RT_REPO_DOCKER_LOCAL }}/maven-webgoat:${{ github.run_number }}"
-         echo "Scanning image: $IMAGE_REF"
-         jf docker scan "$IMAGE_REF" --project "${{ env.PROJECT_KEY }}"
+         IMAGE_TAG="${{ github.run_number }}"
+         IMAGE_REF="$JF_HOST/${RT_REPO_DOCKER_LOCAL}/maven-webgoat:${IMAGE_TAG}"
+
+         # Try to find image locally first
+         LOCAL_IMAGE_REF=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${JF_HOST}/${RT_REPO_DOCKER_LOCAL}/maven-webgoat:${IMAGE_TAG}" | head -1)
+
+         if [ -z "$LOCAL_IMAGE_REF" ]; then
+           # Image not found locally, try pulling from Artifactory
+           echo "Image not found locally, pulling: $IMAGE_REF"
+           docker pull "$IMAGE_REF"
+           IMAGE_TO_SCAN="$IMAGE_REF"
+         else
+           IMAGE_TO_SCAN="$LOCAL_IMAGE_REF"
+         fi
+
+         echo "Scanning image: $IMAGE_TO_SCAN"
+         jf docker scan "$IMAGE_TO_SCAN" --project "${PROJECT_KEY}"
      - name: Publish Docker build info to JFrog Artifactory
        run: |
           jf rt build-docker-create "/${{ env.RT_REPO_DOCKER_LOCAL }}" --image-file=build-metadata \
