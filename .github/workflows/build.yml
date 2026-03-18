@@ -43,7 +43,7 @@ jobs:
         JF_URL: ${{ secrets.JF_URL }}
        with:
         oidc-provider-name: omriz-oidc
-        oidc-token-audience: omriz-oidc
+        oidc-audience: omriz-oidc
      - name: Login to JFrog Artifactory (Docker)
        env:
          JF_URL: ${{ secrets.JF_URL }}
