@@ -15,6 +15,7 @@ permissions:
   contents: write
 
 env:
+  PROJECT_KEY: "rsa-demo"
   RT_REPO_MVN_RELEASE: "rsa-demo-maven-release"
   RT_REPO_MVN_SNAPSHOT: "rsa-demo-maven-sanpshot"
   RT_REPO_DOCKER_LOCAL: "rsa-demo-docker-local"
@@ -63,15 +64,15 @@ jobs:
         jf ca --format=table --threads=100
      - name: Build Maven Package
        run: |
-        jf mvn clean install -f pom.xml -Dmaven.test.skip=true -Dartifactory.publish.artifacts=true --build-name ${{env.BUILD_NAME}} --build-number ${{github.run_number}}
+        jf mvn clean install -f pom.xml -Dmaven.test.skip=true -Dartifactory.publish.artifacts=true --build-name ${{env.BUILD_NAME}} --build-number ${{github.run_number}} --project ${{env.PROJECT_KEY}}
      - name: Security Audit
        run: |
         jf audit
      - name: Docker Build 🐳🐸 and scan
        run: |
-         jf docker build . -t $JF_HOST/${{ env.RT_REPO_DOCKER_LOCAL }}/maven-webgoat:${{ github.run_number }}
-         jf docker scan $JF_HOST/${{ env.RT_REPO_DOCKER_LOCAL }}/maven-webgoat:${{ github.run_number }}
-         jf docker push $JF_HOST/${{ env.RT_REPO_DOCKER_LOCAL }}/maven-webgoat:${{ github.run_number }}
+         jf docker build . -t $JF_HOST/${{ env.RT_REPO_DOCKER_LOCAL }}/maven-webgoat:${{ github.run_number }} --project ${{env.PROJECT_KEY}}
+         jf docker scan $JF_HOST/${{ env.RT_REPO_DOCKER_LOCAL }}/maven-webgoat:${{ github.run_number }} --project ${{env.PROJECT_KEY}}
+         jf docker push $JF_HOST/${{ env.RT_REPO_DOCKER_LOCAL }}/maven-webgoat:${{ github.run_number }} --project ${{env.PROJECT_KEY}}
      - name: Publish build build-info
        run: |
          # Collect and store environment variables in the build-info
