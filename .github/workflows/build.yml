@@ -11,11 +11,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read # for detecting the Github Actions environment.
-  id-token: write # for creating OIDC tokens for signing.
-  packages: write # for uploading attestations.
-  contents: read
-  security-events: write # Required for uploading code scanning.
+  id-token: write
+  contents: write
 
 env:
   RT_REPO_MVN_RELEASE: "rsa-demo-maven-release"
@@ -42,6 +39,7 @@ jobs:
        env:
         JF_URL: ${{ secrets.JF_URL }}
        with:
+        version: '2.96.0'
         oidc-provider-name: omriz-oidc
         oidc-audience: omriz-oidc
      - name: Login to JFrog Artifactory (Docker)
