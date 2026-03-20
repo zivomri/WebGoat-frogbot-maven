@@ -43,6 +43,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
  * LabelDebugService class.
  *
  * @author nbaars
+ * @author omriz 
  * @version $Id: $Id
  */
 @Controller
